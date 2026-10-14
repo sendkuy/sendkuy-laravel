@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }}, Laravel ${{ matrix.laravel }} (${{ matrix.dependencies }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+        laravel: ['12', '13']
+        dependencies: [lowest, highest]
+        include:
+          - laravel: '12'
+            testbench: '10'
+          - laravel: '13'
+            testbench: '11'
+        exclude:
+          - php: '8.2'
+            laravel: '13'
+    steps:
+      - uses: actions/checkout@v5
+      - name: Clone sendkuy-php next to this package
+        run: git clone --depth 1 https://github.com/sendkuy/sendkuy-php.git ../sendkuy-php
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Pin Laravel ${{ matrix.laravel }}
+        run: |
+          composer require --no-update "illuminate/support:^${{ matrix.laravel }}.0"
+          composer require --no-update --dev "orchestra/testbench:^${{ matrix.testbench }}.0"
+      - uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: ${{ matrix.dependencies }}
+      - run: vendor/bin/phpunit
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Clone sendkuy-php next to this package
+        run: git clone --depth 1 https://github.com/sendkuy/sendkuy-php.git ../sendkuy-php
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - uses: ramsey/composer-install@v3
+      - run: vendor/bin/pint --test
+      - run: vendor/bin/phpstan analyse --no-progress

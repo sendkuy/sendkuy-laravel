@@ -130,7 +130,7 @@ php artisan vendor:publish --tag=sendkuy-config
 | Key | Env | Default |
 | --- | --- | --- |
 | `api_key` | `SENDKUY_API_KEY` | none |
-| `base_url` | `SENDKUY_BASE_URL` | `https://app.sendkuy.com/api/v1` |
+| `base_url` | `SENDKUY_BASE_URL` | `https://app.sendkuy.com/api/v1`; change it only to reach a proxy or a mock server in tests |
 | `timeout` | `SENDKUY_TIMEOUT` | `30` seconds |
 | `max_retries` | `SENDKUY_MAX_RETRIES` | `2` |
 | `webhook.secret` | `SENDKUY_WEBHOOK_SECRET` | none |

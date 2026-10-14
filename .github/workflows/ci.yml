@@ -28,8 +28,6 @@ jobs:
             laravel: '13'
     steps:
       - uses: actions/checkout@v5
-      - name: Clone sendkuy-php next to this package
-        run: git clone --depth 1 https://github.com/sendkuy/sendkuy-php.git ../sendkuy-php
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -47,8 +45,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Clone sendkuy-php next to this package
-        run: git clone --depth 1 https://github.com/sendkuy/sendkuy-php.git ../sendkuy-php
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'

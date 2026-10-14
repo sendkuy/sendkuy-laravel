@@ -13,8 +13,6 @@ WhatsApp, SMS and email notifications for Laravel, a facade for the whole SendKu
 [![CI](https://github.com/sendkuy/sendkuy-laravel/actions/workflows/ci.yml/badge.svg)](https://github.com/sendkuy/sendkuy-laravel/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-> **Status:** not released yet. The first release, 1.0.0, is on its way. Star or watch this repository to hear when it lands.
-
 [Baca dalam Bahasa Indonesia](README.id.md)
 
 ## Install

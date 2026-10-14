@@ -6,8 +6,6 @@
 
 Notifikasi WhatsApp, SMS, dan email untuk Laravel, facade untuk seluruh API SendKuy, dan webhook bertanda tangan yang sampai sebagai event Laravel.
 
-> **Status:** belum dirilis. Rilis pertama, 1.0.0, sedang disiapkan. Beri star atau watch repo ini supaya kamu tahu saat rilis.
-
 [Read in English](README.md)
 
 ## Instalasi

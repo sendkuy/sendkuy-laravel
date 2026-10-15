@@ -92,6 +92,8 @@ When a notification implements `ShouldQueue`, Laravel retries its job if a worke
 
 Keep `toSendKuy()` deterministic for this to hold: build the message from the notification's own data, not from `now()` or other values that change between runs. A retry that produces a different payload under the same key is refused with `409 idempotency_key_reused`, so the job fails instead of sending twice. To schedule, store the time on the notification when you create it and pass that to `scheduleAt()`.
 
+A refusal is final for that notification. When SendKuy refuses the send, for example with `insufficient_credits` or `no_sender_available`, every retry of the job gets the same refusal under the same key and the job fails. Once you have fixed the cause, send the notification again: a new notification has a new id, and so a new key. Retrying does help with `429` and server errors, which SendKuy does not remember under the key.
+
 The channel returns the created messages, so a `NotificationSent` listener can store their ids from `$event->response`.
 
 ## Webhooks

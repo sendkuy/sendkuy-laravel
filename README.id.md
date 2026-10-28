@@ -8,6 +8,15 @@ Notifikasi WhatsApp, SMS, dan email untuk Laravel, facade untuk seluruh API Send
 
 [Read in English](README.md)
 
+## Yang bisa kamu kirim
+
+- **WhatsApp** dari nomor yang tersambung lewat kode QR, [ekstensi Chrome SendKuy WA Gateway](https://chromewebstore.google.com/detail/sendkuy-wa-gateway/kdopgnbocfeoehhjbolfmibnmoicdofc), atau WhatsApp Cloud API ([API WhatsApp](https://sendkuy.com/channels/whatsapp?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
+- **SMS** lewat HP Android dengan aplikasi SendKuy Gateway, atau provider SMS ([SMS gateway](https://sendkuy.com/channels/sms?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
+- **Email** dari domain kamu sendiri ([API email](https://sendkuy.com/channels/email?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
+- **Kode OTP** lewat `SendKuy::verifications()`, dengan cadangan dari WhatsApp ke SMS.
+- **Notifikasi Laravel** lewat channel `sendkuy`, tidak pernah terkirim dobel saat job antrean diulang.
+- **Percakapan dua arah** untuk helpdesk: pesan masuk tiba sebagai event `WebhookReceived`.
+
 ## Instalasi
 
 ```bash
@@ -66,6 +75,8 @@ SENDKUY_WEBHOOK_SECRET=whsec_...
 ```
 
 Setiap kiriman dengan signature valid menjadi event `SendKuy\Laravel\Events\WebhookReceived`. Kalau `SENDKUY_WEBHOOK_SECRET` belum diisi, rute menjawab `500` dan mencatat error, sehingga masalahnya terlihat di riwayat pengiriman webhook dasbor SendKuy. Pasang listener `ShouldQueue` supaya rute menjawab dalam 10 detik, dan pakai `$event->id` untuk melewati kiriman ganda.
+
+Event `message.received` membawa pengirim (`from`), channel, nomor yang menerimanya, dan media bila ada. Kalau akunmu meneruskan pesan masuk ke webhook saja, pesannya tidak disimpan di SendKuy, jadi `id` dan `conversation_id` bernilai `null`: balas dengan `SendKuy::messages()->send()` ke `$event->data['from']` di `$event->data['channel']`.
 
 Panduan lengkap ada di [README bahasa Inggris](README.md) dan [docs.sendkuy.com/laravel](https://docs.sendkuy.com/laravel?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel).
 

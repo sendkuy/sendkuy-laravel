@@ -15,6 +15,15 @@ WhatsApp, SMS and email notifications for Laravel, a facade for the whole SendKu
 
 [Baca dalam Bahasa Indonesia](README.id.md)
 
+## What you can send
+
+- **WhatsApp** from a number connected by QR code, the [SendKuy WA Gateway Chrome extension](https://chromewebstore.google.com/detail/sendkuy-wa-gateway/kdopgnbocfeoehhjbolfmibnmoicdofc), or the WhatsApp Cloud API ([WhatsApp API](https://sendkuy.com/channels/whatsapp?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
+- **SMS** through an Android phone running SendKuy Gateway, or an SMS provider ([SMS gateway](https://sendkuy.com/channels/sms?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
+- **Email** from your own domain ([email API](https://sendkuy.com/channels/email?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
+- **OTP codes** with `SendKuy::verifications()`, falling back from WhatsApp to SMS.
+- **Laravel notifications** through the `sendkuy` channel, never sent twice when a queued job retries.
+- **Two-way conversations** for your helpdesk: incoming messages arrive as `WebhookReceived` events.
+
 ## Install
 
 ```bash
@@ -92,7 +101,7 @@ When a notification implements `ShouldQueue`, Laravel retries its job if a worke
 
 Keep `toSendKuy()` deterministic for this to hold: build the message from the notification's own data, not from `now()` or other values that change between runs. A retry that produces a different payload under the same key is refused with `409 idempotency_key_reused`, so the job fails instead of sending twice. To schedule, store the time on the notification when you create it and pass that to `scheduleAt()`.
 
-A refusal is final for that notification. When SendKuy refuses the send, for example with `insufficient_credits` or `no_sender_available`, every retry of the job gets the same refusal under the same key and the job fails. Once you have fixed the cause, send the notification again: a new notification has a new id, and so a new key. Retrying does help with `429` and server errors, which SendKuy does not remember under the key.
+A refusal is final for that notification. When SendKuy refuses the send, for example with `insufficient_credits` or `no_sender_available`, every retry of the job gets the same refusal under the same key and the job fails. Once you have fixed the cause, send the notification again: a new notification has a new id, and so a new key. Retrying does help with `429` and server errors: a retry under the same key either runs again or returns the message that already went out.
 
 The channel returns the created messages, so a `NotificationSent` listener can store their ids from `$event->response`.
 
@@ -115,13 +124,15 @@ class HandleSendKuyWebhook implements ShouldQueue
     public function handle(WebhookReceived $event): void
     {
         if ($event->type === 'message.received') {
-            // $event->data is the message
+            // $event->data: from, channel, body, provider_message_id
         }
     }
 }
 ```
 
 `$event->id` stays the same across SendKuy's retries of one delivery: use it to skip duplicates. Queue the listener so the route answers within SendKuy's 10-second timeout. New event types reach your listener without a package update.
+
+`message.received` carries who wrote (`from`), the channel, the number that received it and any media. When your account forwards incoming messages to your webhook only, nothing is stored in SendKuy and `id` and `conversation_id` are `null`: reply with `SendKuy::messages()->send()` to `$event->data['from']` on `$event->data['channel']`.
 
 ## Configuration
 

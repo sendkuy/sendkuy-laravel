@@ -1,9 +1,9 @@
 {
     "name": "sendkuy/laravel",
-    "description": "SendKuy for Laravel: WhatsApp, SMS and email notifications, a facade, and signed webhooks.",
+    "description": "SendKuy for Laravel: WhatsApp, SMS and email notification channel, OTP codes, a facade for the WhatsApp API and SMS gateway, and signed webhooks.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["sendkuy", "laravel", "laravel-notification-channel", "whatsapp", "whatsapp-api", "sms", "email", "otp", "notifications", "messaging", "indonesia"],
+    "keywords": ["sendkuy", "laravel", "laravel-notification-channel", "whatsapp", "whatsapp-api", "whatsapp-gateway", "sms", "sms-gateway", "email", "email-api", "otp", "otp-verification", "webhooks", "notifications", "messaging", "indonesia"],
     "homepage": "https://docs.sendkuy.com/laravel",
     "support": {
         "issues": "https://github.com/sendkuy/sendkuy-laravel/issues",

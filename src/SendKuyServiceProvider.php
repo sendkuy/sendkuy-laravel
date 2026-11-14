@@ -4,9 +4,14 @@ namespace SendKuy\Laravel;
 
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Mail\MailManager;
 use Illuminate\Notifications\ChannelManager;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\ServiceProvider;
+use SendKuy\Laravel\Mail\NotificationIdempotencyKey;
+use SendKuy\Laravel\Mail\SendKuyTransport;
 use SendKuy\Laravel\Notifications\SendKuyChannel;
 use SendKuy\SendKuy;
 
@@ -34,5 +39,14 @@ final class SendKuyServiceProvider extends ServiceProvider
         Notification::resolved(static function (ChannelManager $channels): void {
             $channels->extend('sendkuy', fn (Container $app): SendKuyChannel => $app->make(SendKuyChannel::class));
         });
+
+        $this->callAfterResolving('mail.manager', static function (MailManager $mail, Container $app): void {
+            $mail->extend('sendkuy', static fn (array $config): SendKuyTransport => new SendKuyTransport(
+                $app->make(SendKuy::class),
+                is_string($config['gateway_id'] ?? null) && $config['gateway_id'] !== '' ? $config['gateway_id'] : null,
+            ));
+        });
+
+        Event::listen(MessageSending::class, NotificationIdempotencyKey::class);
     }
 }

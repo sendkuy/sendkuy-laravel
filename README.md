@@ -22,6 +22,7 @@ WhatsApp, SMS and email notifications for Laravel, a facade for the whole SendKu
 - **Email** from your own domain ([email API](https://sendkuy.com/channels/email?utm_source=readme&utm_medium=sdk&utm_campaign=sendkuy-laravel)).
 - **OTP codes** with `SendKuy::verifications()`, falling back from WhatsApp to SMS.
 - **Laravel notifications** through the `sendkuy` channel, never sent twice when a queued job retries.
+- **Every Laravel email** through the `sendkuy` mail transport, with `MAIL_MAILER=sendkuy`.
 - **Two-way conversations** for your helpdesk: incoming messages arrive as `WebhookReceived` events.
 
 ## Install
@@ -101,9 +102,61 @@ When a notification implements `ShouldQueue`, Laravel retries its job if a worke
 
 Keep `toSendKuy()` deterministic for this to hold: build the message from the notification's own data, not from `now()` or other values that change between runs. A retry that produces a different payload under the same key is refused with `409 idempotency_key_reused`, so the job fails instead of sending twice. To schedule, store the time on the notification when you create it and pass that to `scheduleAt()`.
 
-A refusal is final for that notification. When SendKuy refuses the send, for example with `insufficient_credits` or `no_sender_available`, every retry of the job gets the same refusal under the same key and the job fails. Once you have fixed the cause, send the notification again: a new notification has a new id, and so a new key. Retrying does help with `429` and server errors: a retry under the same key either runs again or returns the message that already went out.
+A refusal is not remembered. When SendKuy refuses the send, for example with `insufficient_credits` or `no_sender_available`, nothing went out, so a retry of the job under the same key runs the send again: once you top up or connect a sender, the next retry goes through. A send whose every message failed because of its sender is not remembered either; a failure that may already have reached the recipient, such as a provider timeout, stays remembered. Retrying also helps with `429` and server errors: a retry under the same key either runs again or returns the message that already went out.
 
 The channel returns the created messages, so a `NotificationSent` listener can store their ids from `$event->response`.
+
+## Use SendKuy as your Laravel mailer
+
+Send every Laravel email (mailables, notifications through the `mail` channel, password resets, email verification) through SendKuy by adding a mailer to `config/mail.php`:
+
+```php
+'mailers' => [
+    'sendkuy' => [
+        'transport' => 'sendkuy',
+        'gateway_id' => env('SENDKUY_MAIL_GATEWAY_ID'),
+    ],
+],
+```
+
+and setting it as the default in `.env`:
+
+```dotenv
+MAIL_MAILER=sendkuy
+MAIL_FROM_ADDRESS=hello@your-domain.com
+MAIL_FROM_NAME="Your App"
+```
+
+The transport uses the same `SENDKUY_API_KEY` as the rest of the package.
+
+**The sender address belongs to the gateway.** SendKuy sends from the address of the email gateway in your dashboard, so `MAIL_FROM_ADDRESS` must match that gateway's address and domain. `MAIL_FROM_NAME`, or the name on a mailable's `from`, becomes the name recipients see. Set `gateway_id` to the `gw_` id of that gateway to always send through it; such an email is never moved to another sender. Left empty, SendKuy picks among your live email senders and, when your plan lends them, SendKuy's shared senders, whose address is not yours.
+
+**What is sent.** Every `To` recipient, the subject, and the HTML part (or the text part, escaped with its line breaks kept, when there is no HTML). The first `Reply-To` becomes the reply address; without one, replies go to the from address, so a `no-reply@` address means replies are lost. `List-Unsubscribe` and `List-Unsubscribe-Post` are passed on, so a newsletter can carry your own one-click unsubscribe; every other header is left out. Every email is sent as `transactional`: exactly as rendered, with no open or click tracking and no unsubscribe link from SendKuy.
+
+**What is refused.** `Cc`, `Bcc`, recipients that are only on the envelope, and attached or embedded files throw a `TransportException` before anything is sent. The SendKuy API takes attachments as URLs, so link to a file instead. A message that fails, `insufficient_credits`, `no_sender_available` and every other API error throw a `TransportException` with the error code and message id, so a queued mail job fails and can retry.
+
+### Sending twice
+
+The transport sends an idempotency key with every email:
+
+- the `X-SendKuy-Idempotency-Key` header when the email has one (the header itself is not sent);
+- for a notification, a key built from the notification id and its recipients, set for you. A retried queued notification is never sent twice;
+- otherwise the email's Message-ID. Symfony creates a new Message-ID on every attempt, so this only covers the SDK retrying a request, not your queue retrying the job. Give a queued mailable its own key:
+
+```php
+public function headers(): Headers
+{
+    return new Headers(text: ['X-SendKuy-Idempotency-Key' => 'order-'.$this->order->id.'-shipped']);
+}
+```
+
+SendKuy remembers a key for 24 hours. A retry whose key already sent an email, even with a body rendered differently (a signed link with a new expiry, for example), counts as sent and does not throw.
+
+The notification key is only added when the mailer that sends the email uses the `sendkuy` transport directly. A `failover` or `roundrobin` mailer that wraps `sendkuy` gets no automatic key, so a retried queued notification may be sent twice; set `X-SendKuy-Idempotency-Key` yourself, or make `sendkuy` the mailer itself.
+
+### Rate limit
+
+Each email is one API request, so a large batch of notifications meets your plan's per-minute request limit (60 by default). A request over the limit throws a `TransportException`; give queued mail jobs `$tries` and `$backoff` so they retry later.
 
 ## Webhooks
 
